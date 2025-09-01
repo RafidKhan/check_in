@@ -31,7 +31,7 @@ class SplashScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             const Text(
-              "CheckIn",
+              "Check In",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
