@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:check_in/modules/home_page/view/components/geofence_required_dialog.dart';
 import 'package:check_in/modules/home_page/view/components/radius_input_bottom_sheet.dart';
 import 'package:check_in/utils/navigation.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,14 @@ class HomeController extends StateNotifier<HomeState> {
     final mapController = MapController(initPosition: initialPosition);
     state = state.copyWith(mapController: mapController);
     Navigator.pop(context);
+    if (state.geoFenceCenter == null && state.geoFenceRadius == 0) {
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return const GeoFenceRequiredDialog();
+        },
+      );
+    }
 
     state.mapController?.listenerMapSingleTapping.addListener(() async {
       final tappedPoint = state.mapController?.listenerMapSingleTapping.value;
