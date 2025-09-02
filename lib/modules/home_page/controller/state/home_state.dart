@@ -1,3 +1,5 @@
+import 'package:check_in/modules/home_page/model/user_model.dart';
+import 'package:check_in/utils/enum.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 
 class HomeState {
@@ -9,6 +11,8 @@ class HomeState {
   final bool isTracking;
   final DateTime? checkInTime;
   final DateTime? checkOutTime;
+  final UserModel? userModel;
+  final UserType userType;
 
   const HomeState({
     this.selectedCheckInPoint,
@@ -19,6 +23,8 @@ class HomeState {
     this.isTracking = false,
     this.checkInTime,
     this.checkOutTime,
+    this.userModel,
+    this.userType = UserType.RegularUser,
   });
 
   HomeState copyWith({
@@ -30,6 +36,8 @@ class HomeState {
     bool? isTracking,
     DateTime? checkInTime,
     DateTime? checkOutTime,
+    UserModel? userModel,
+    UserType? userType,
   }) {
     return HomeState(
       selectedCheckInPoint: selectedCheckInPoint ?? this.selectedCheckInPoint,
@@ -40,6 +48,8 @@ class HomeState {
       isTracking: isTracking ?? this.isTracking,
       checkInTime: checkInTime ?? this.checkInTime,
       checkOutTime: checkOutTime ?? this.checkOutTime,
+      userModel: userModel ?? this.userModel,
+      userType: userType ?? this.userType,
     );
   }
 }

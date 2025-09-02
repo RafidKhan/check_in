@@ -1,3 +1,4 @@
+import 'package:check_in/utils/enum.dart';
 import 'package:flutter/material.dart';
 
 extension ScreenSize on BuildContext {
@@ -14,6 +15,19 @@ extension WorkDuration on DateTime {
       return "Your total work hour: ${duration.inHours} hour${duration.inHours > 1 ? 's' : ''}";
     } else {
       return "Your total work minute: ${duration.inMinutes} minute${duration.inMinutes > 1 ? 's' : ''}";
+    }
+  }
+}
+
+extension UserTypeExt on String {
+  UserType get getUserType {
+    switch (this) {
+      case "Admin":
+        return UserType.Admin;
+      case "User":
+        return UserType.RegularUser;
+      default:
+        return UserType.RegularUser;
     }
   }
 }

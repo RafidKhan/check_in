@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:check_in/modules/home_page/model/user_model.dart';
 import 'package:check_in/modules/home_page/view/components/geofence_required_dialog.dart';
 import 'package:check_in/modules/home_page/view/components/radius_input_bottom_sheet.dart';
+import 'package:check_in/utils/enum.dart';
+import 'package:check_in/utils/extensions.dart';
 import 'package:check_in/utils/navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
@@ -12,6 +15,8 @@ import 'package:permission_handler/permission_handler.dart'
     as permission_handler;
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../utils/firebase_firestore_services/user_service.dart';
+import '../view/components/geofence_required_dialog_for_user.dart';
 import '../view/components/location_permission_required.dart';
 import 'state/home_state.dart';
 
@@ -69,7 +74,9 @@ class HomeController extends StateNotifier<HomeState> {
       await showDialog(
         context: context,
         builder: (context) {
-          return const GeoFenceRequiredDialog();
+          return state.userType == UserType.Admin
+              ? const GeoFenceRequiredDialog()
+              : const GeoFenceRequiredDialogForUser();
         },
       );
     }
@@ -77,7 +84,7 @@ class HomeController extends StateNotifier<HomeState> {
     state.mapController?.listenerMapSingleTapping.addListener(() async {
       final tappedPoint = state.mapController?.listenerMapSingleTapping.value;
       if (tappedPoint != null) {
-        checkForGeoFenceTap(tappedPoint);
+        inputGeoFenceRadius(tappedPoint);
       }
     });
   }
@@ -437,13 +444,26 @@ class HomeController extends StateNotifier<HomeState> {
     return degrees * pi / 180;
   }
 
-  void checkForGeoFenceTap(GeoPoint point) {
-    if (state.geoFenceCenter == null) {
-      inputGeoFenceRadius(point);
-    }
+  void checkOut() {
+    state = state.copyWith(checkOutTime: DateTime.now());
   }
 
-  checkOut() {
-    state = state.copyWith(checkOutTime: DateTime.now());
+  Future<void> initializeUser(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final userService = UserService();
+      final user = await userService.checkAndCreateUser();
+      state = state.copyWith(
+        userModel: UserModel.fromJson(user.toJson()),
+        userType: user.userType.getUserType,
+      );
+      Navigation.pop();
+    } catch (e) {
+      print('Failed to initialize user: $e');
+      Navigation.pop();
+    }
   }
 }

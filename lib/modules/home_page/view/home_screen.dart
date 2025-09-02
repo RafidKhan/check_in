@@ -20,7 +20,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     final controller = ref.read(homeController.notifier);
     Future(() {
-      controller.initMap(context);
+      controller.initializeUser(context).then((value) {
+        controller.initMap(context);
+      });
     });
   }
 
@@ -272,9 +274,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               "Check Out: ${DateFormat("hh:mm a").format(state.checkOutTime!)}",
                             ),
                           ],
-                          if(state.checkInTime != null && state.checkOutTime != null)...[
-                            Text(state.checkInTime!.workDuration(state.checkOutTime!))
-                          ]
+                          if (state.checkInTime != null &&
+                              state.checkOutTime != null) ...[
+                            Text(
+                              state.checkInTime!.workDuration(
+                                state.checkOutTime!,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],
