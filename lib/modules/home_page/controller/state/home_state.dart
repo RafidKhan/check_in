@@ -7,6 +7,8 @@ class HomeState {
   final double geoFenceRadius;
   final GeoPoint? currentLocation;
   final bool isTracking;
+  final DateTime? checkInTime;
+  final DateTime? checkOutTime;
 
   const HomeState({
     this.selectedCheckInPoint,
@@ -15,6 +17,8 @@ class HomeState {
     this.geoFenceRadius = 0,
     this.currentLocation,
     this.isTracking = false,
+    this.checkInTime,
+    this.checkOutTime,
   });
 
   HomeState copyWith({
@@ -24,6 +28,8 @@ class HomeState {
     double? geoFenceRadius,
     GeoPoint? currentLocation,
     bool? isTracking,
+    DateTime? checkInTime,
+    DateTime? checkOutTime,
   }) {
     return HomeState(
       selectedCheckInPoint: selectedCheckInPoint ?? this.selectedCheckInPoint,
@@ -32,6 +38,8 @@ class HomeState {
       geoFenceRadius: geoFenceRadius ?? this.geoFenceRadius,
       currentLocation: currentLocation ?? this.currentLocation,
       isTracking: isTracking ?? this.isTracking,
+      checkInTime: checkInTime ?? this.checkInTime,
+      checkOutTime: checkOutTime ?? this.checkOutTime,
     );
   }
 }

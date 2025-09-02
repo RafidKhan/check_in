@@ -116,6 +116,15 @@ class HomeController extends StateNotifier<HomeState> {
 
   Future<void> checkIn() async {
     final context = Navigation.globalKey.currentContext!;
+    if (state.selectedCheckInPoint != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have already checked in'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     showDialog(
       context: context,
@@ -141,7 +150,10 @@ class HomeController extends StateNotifier<HomeState> {
             }
 
             if (isInsideGeofence(point)) {
-              state = state.copyWith(selectedCheckInPoint: point);
+              state = state.copyWith(
+                selectedCheckInPoint: point,
+                checkInTime: DateTime.now(),
+              );
               await state.mapController?.addMarker(
                 point,
                 markerIcon: const MarkerIcon(
@@ -424,5 +436,9 @@ class HomeController extends StateNotifier<HomeState> {
     if (state.geoFenceCenter == null) {
       inputGeoFenceRadius(point);
     }
+  }
+
+  checkOut() {
+    state = state.copyWith(checkOutTime: DateTime.now());
   }
 }

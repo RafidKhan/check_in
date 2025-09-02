@@ -1,7 +1,9 @@
+import 'package:check_in/utils/extensions.dart';
 import 'package:check_in/utils/google_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../controller/home_controller.dart';
 import 'components/home_map_view.dart';
 
@@ -108,7 +110,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: controller.isInsideGeofence(state.currentLocation!)
+                  color:
+                      state.currentLocation != null &&
+                          controller.isInsideGeofence(state.currentLocation!)
                       ? Colors.green.withOpacity(0.9)
                       : Colors.red.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20),
@@ -124,7 +128,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      controller.isInsideGeofence(state.currentLocation!)
+                      state.currentLocation != null &&
+                              controller.isInsideGeofence(
+                                state.currentLocation!,
+                              )
                           ? Icons.check_circle
                           : Icons.warning,
                       color: Colors.white,
@@ -132,7 +139,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      controller.isInsideGeofence(state.currentLocation!)
+                      state.currentLocation != null &&
+                              controller.isInsideGeofence(
+                                state.currentLocation!,
+                              )
                           ? 'Inside Geofence'
                           : 'Outside Geofence',
                       style: const TextStyle(
@@ -193,30 +203,82 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
 
-                  if (controller.isInsideGeofence(state.currentLocation!))
-                    ElevatedButton(
-                      onPressed: () {
-                        controller.checkIn();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
+                  if (state.currentLocation != null &&
+                      controller.isInsideGeofence(state.currentLocation!)) ...[
+                    if (state.selectedCheckInPoint == null) ...[
+                      ElevatedButton(
+                        onPressed: () {
+                          controller.checkIn();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        child: const Text(
+                          "Check In",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        "Check In",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ] else ...[
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (state.checkOutTime == null) ...[
+                            ElevatedButton(
+                              onPressed: () {
+                                controller.checkOut();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                "Check Out",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+
+                          if (state.checkInTime != null) ...[
+                            Text(
+                              "Check In: ${DateFormat(" hh:mm a").format(state.checkInTime!)}",
+                            ),
+                          ],
+
+                          if (state.checkOutTime != null) ...[
+                            Text(
+                              "Check Out: ${DateFormat("hh:mm a").format(state.checkOutTime!)}",
+                            ),
+                          ],
+                          if(state.checkInTime != null && state.checkOutTime != null)...[
+                            Text(state.checkInTime!.workDuration(state.checkOutTime!))
+                          ]
+                        ],
                       ),
-                    ),
+                    ],
+                  ],
                 ],
               ),
             ),
