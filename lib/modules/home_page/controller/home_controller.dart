@@ -339,7 +339,7 @@ class HomeController extends StateNotifier<HomeState> {
             ),
           );
           await _updateCurrentLocationMarker(newLocation);
-          _checkGeofenceStatus(newLocation);
+          await _checkGeofenceStatus(newLocation);
         }
       },
       onError: (error) {
@@ -370,7 +370,7 @@ class HomeController extends StateNotifier<HomeState> {
     );
   }
 
-  void _checkGeofenceStatus(GeoPoint currentLocation) {
+  Future<void> _checkGeofenceStatus(GeoPoint currentLocation) async {
     final isInside = isInsideGeofence(currentLocation);
 
     if (isInside) {
@@ -380,7 +380,7 @@ class HomeController extends StateNotifier<HomeState> {
       //auto check out if left from location
       if (state.selectedCheckInPoint != null && state.checkInTime != null) {
         //condition to check if checked in. If not, allow to check in first.
-        checkOut();
+        await checkOut();
       }
     }
   }
@@ -453,17 +453,15 @@ class HomeController extends StateNotifier<HomeState> {
 
   Future<void> checkOut() async {
     try {
-      // 1. First save checkout to Firestore
+      // 1. Save checkout to Firestore
       await checkInService.checkOut();
 
+      // 2. Fetch check out data
       await _getTodaysCheckIn();
 
-      // 2. Then update local UI state
-      _locationSubscription?.cancel();
-
-      // Remove check-in marker if exists
+      // 3. Remove check-in marker if exists
       if (state.selectedCheckInPoint != null) {
-        state.mapController?.removeMarker(
+        await state.mapController?.removeMarker(
           osm.GeoPoint(
             latitude: state.selectedCheckInPoint!.lat,
             longitude: state.selectedCheckInPoint!.lon,
@@ -471,9 +469,9 @@ class HomeController extends StateNotifier<HomeState> {
         );
       }
 
-      // Remove current location marker if exists
+      // 4. Remove current location marker if exists
       if (state.currentLocation != null) {
-        state.mapController?.removeMarker(
+        await state.mapController?.removeMarker(
           osm.GeoPoint(
             latitude: state.currentLocation!.lat,
             longitude: state.currentLocation!.lon,
@@ -481,10 +479,8 @@ class HomeController extends StateNotifier<HomeState> {
         );
       }
 
-      // Update state to stop tracking and record checkout time
       state = state.copyWith(isTracking: false);
 
-      // Show checkout confirmation
       ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
         const SnackBar(
           content: Text('Checked out successfully'),
@@ -492,11 +488,9 @@ class HomeController extends StateNotifier<HomeState> {
         ),
       );
 
-      print('User checked out at ${DateTime.now()}');
+      print('✅ User checked out at ${DateTime.now()}');
     } catch (e) {
-      print('Error during checkout: $e');
-
-      // Show error message
+      print('❌ Error during checkout: $e');
       ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
         SnackBar(
           content: Text('Checkout failed: $e'),
