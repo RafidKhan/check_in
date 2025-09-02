@@ -12,7 +12,20 @@
           "package_name": "com.checkin.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "749355822769-ed03ehlbjm9ib2b2her58dkkov77b7oo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.checkin.app",
+            "certificate_hash": "590721c5c12efd19563be4403deb66391176ac7c"
+          }
+        },
+        {
+          "client_id": "749355822769-agvf2bmj0fcsd7bqtlcefdsjno29bt2v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAcCDHMDe-A0OjSaT6jEAMxHi4M7n7saL4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "749355822769-agvf2bmj0fcsd7bqtlcefdsjno29bt2v.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
