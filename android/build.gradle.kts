@@ -1,3 +1,22 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        // Google Services plugin for Firebase
+        classpath("com.google.gms:google-services:4.4.2")
+
+        // Android Gradle Plugin
+        classpath("com.android.tools.build:gradle:8.5.2")
+
+        // Kotlin Gradle Plugin
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")
+    }
+}
+
+
 allprojects {
     repositories {
         google()

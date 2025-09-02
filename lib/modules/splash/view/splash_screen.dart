@@ -1,8 +1,24 @@
+import 'package:check_in/modules/login/view/login_screen.dart';
 import 'package:check_in/utils/extensions.dart';
+import 'package:check_in/utils/navigation.dart';
 import 'package:flutter/material.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    Future.delayed(Duration(seconds: 2), () {
+      Navigation.push(const LoginScreen());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
