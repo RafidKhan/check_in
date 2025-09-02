@@ -164,44 +164,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Geofence Info',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Geofence Info',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Radius: ${state.geoFenceRadius.toStringAsFixed(2)} meters',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      Text(
-                        'Center: ${state.geoFenceCenter!.latitude.toStringAsFixed(6)}, '
-                        '${state.geoFenceCenter!.longitude.toStringAsFixed(6)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                        const SizedBox(height: 8),
+                        Text(
+                          'Radius: ${state.geoFenceRadius.toStringAsFixed(2)} meters',
+                          style: const TextStyle(fontSize: 14),
                         ),
-                      ),
-                    ],
+                        Text(
+                          'Center: ${state.geoFenceCenter!.latitude.toStringAsFixed(6)}, '
+                          '${state.geoFenceCenter!.longitude.toStringAsFixed(6)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ElevatedButton(
+                  if (controller.isInsideGeofence(state.currentLocation!))
+                    ElevatedButton(
                       onPressed: () {
                         controller.checkIn();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
+                          horizontal: 20,
                           vertical: 16,
                         ),
                         shape: RoundedRectangleBorder(
@@ -211,12 +212,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: const Text(
                         "Check In",
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
