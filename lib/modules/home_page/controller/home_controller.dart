@@ -371,6 +371,11 @@ class HomeController extends StateNotifier<HomeState> {
       _updateMarkerColor(Colors.green);
     } else {
       _updateMarkerColor(Colors.red);
+      //auto check out if left from location
+      if (state.selectedCheckInPoint != null && state.checkInTime != null) {
+        //condition to check if checked in. If not, allow to check in first.
+        checkOut();
+      }
     }
   }
 
