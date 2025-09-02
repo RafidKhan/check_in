@@ -71,7 +71,7 @@ class HomeController extends StateNotifier<HomeState> {
     state.mapController?.listenerMapSingleTapping.addListener(() async {
       final tappedPoint = state.mapController?.listenerMapSingleTapping.value;
       if (tappedPoint != null) {
-        setCheckInPoint(tappedPoint);
+        checkForGeoFence(tappedPoint);
       }
     });
   }
@@ -126,6 +126,20 @@ class HomeController extends StateNotifier<HomeState> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  void checkForGeoFence(GeoPoint point) {
+    if (state.geoFenceCenter == null) {
+      final context = Navigation.globalKey.currentContext!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Create Geofence first to check in'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      setCheckInPoint(point);
     }
   }
 }
