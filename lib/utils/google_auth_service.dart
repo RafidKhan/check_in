@@ -1,3 +1,4 @@
+import 'package:check_in/modules/login/view/login_screen.dart';
 import 'package:check_in/modules/splash/view/splash_screen.dart';
 import 'package:check_in/utils/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,6 +6,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleAuthService {
   static GoogleSignInAccount? _currentUser;
+
+  static Future<void> initialize() async {
+    await GoogleSignIn.instance.initialize();
+  }
 
   /// Sign in with Google and connect to Firebase
   static Future<User?> signInWithGoogle() async {
@@ -42,8 +47,6 @@ class GoogleAuthService {
     await GoogleSignIn.instance.signOut();
     await FirebaseAuth.instance.signOut();
     _currentUser = null;
-    Navigation.pushAndRemoveUntil(const SplashScreen());
+    Navigation.pushAndRemoveUntil(const LoginScreen());
   }
-
-  // ... other methods if needed ...
 }

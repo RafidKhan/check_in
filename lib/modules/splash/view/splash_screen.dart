@@ -1,7 +1,10 @@
 import 'package:check_in/modules/login/view/login_screen.dart';
 import 'package:check_in/utils/extensions.dart';
 import 'package:check_in/utils/navigation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../../home/view/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,11 +16,22 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    Future.delayed(Duration(seconds: 2), () {
-      Navigation.push(const LoginScreen());
+    WidgetsBinding.instance.addPostFrameCallback((e) {
+      _checkLoginStatus();
     });
+  }
+
+  Future<void> _checkLoginStatus() async {
+    // Check if user is logged in with Firebase Auth
+    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+
+    // Navigate based on login status
+    if (isLoggedIn) {
+      Navigation.pushReplacement(const HomeScreen());
+    } else {
+      Navigation.pushReplacement(const LoginScreen());
+    }
   }
 
   @override
