@@ -57,6 +57,7 @@ class HomeController extends StateNotifier<HomeState> {
     );
 
     final mapController = MapController(initPosition: initialPosition);
+
     state = state.copyWith(mapController: mapController);
     Navigator.pop(context);
     if (state.geoFenceCenter == null && state.geoFenceRadius == 0) {
@@ -110,40 +111,92 @@ class HomeController extends StateNotifier<HomeState> {
     }
   }
 
-  Future<void> setCheckInPoint(GeoPoint point) async {
-    if (state.selectedCheckInPoint == null) {
-      // Check if point is inside any geofence
-      if (_isInsideGeofence(point)) {
-        state = state.copyWith(selectedCheckInPoint: point);
-        await state.mapController?.addMarker(
-          point,
-          markerIcon: const MarkerIcon(
-            icon: Icon(Icons.navigation, color: Colors.green, size: 48),
-          ),
-        );
+  Future<void> checkIn() async {
+    final context = Navigation.globalKey.currentContext!;
 
-        ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
-          const SnackBar(
-            content: Text('Check-in successful! You are inside the geofence.'),
-            backgroundColor: Colors.green,
-          ),
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    await requestLocationPermission(
+      onSuccess: () async {
+        try {
+          // Get current location
+          final currentLocation = await location.getLocation();
+          final point = GeoPoint(
+            latitude: currentLocation.latitude ?? 0,
+            longitude: currentLocation.longitude ?? 0,
+          );
+
+          // Close loading indicator
+          Navigator.pop(context);
+
+          if (state.selectedCheckInPoint == null) {
+            if (state.geoFenceCenter == null) {
+              await showDialog(
+                context: context,
+                builder: (context) {
+                  return const GeoFenceRequiredDialog();
+                },
+              );
+              return;
+            }
+
+            if (_isInsideGeofence(point)) {
+              state = state.copyWith(selectedCheckInPoint: point);
+              await state.mapController?.addMarker(
+                point,
+                markerIcon: const MarkerIcon(
+                  icon: Icon(Icons.navigation, color: Colors.green, size: 48),
+                ),
+              );
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Check-in successful! You are inside the geofence.',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Check-in failed! You are outside the geofence.',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You have already checked in'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } catch (e) {
+          Navigator.pop(context); // Close loading indicator
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error getting location: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      onError: (errorMessage) {
+        Navigator.pop(context); // Close loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
         );
-      } else {
-        ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
-          const SnackBar(
-            content: Text('Check-in failed! You are outside the geofence.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
-        const SnackBar(
-          content: Text('You have already checked in'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+      },
+    );
   }
 
   Future<void> inputGeoFenceRadius(GeoPoint point) async {
@@ -259,8 +312,6 @@ class HomeController extends StateNotifier<HomeState> {
   void checkForGeoFenceTap(GeoPoint point) {
     if (state.geoFenceCenter == null) {
       inputGeoFenceRadius(point);
-    } else {
-      setCheckInPoint(point);
     }
   }
 }

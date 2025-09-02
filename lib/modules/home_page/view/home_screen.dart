@@ -26,6 +26,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final state = ref.watch(homeController);
+    final controller = ref.read(homeController.notifier);
     return Scaffold(
       appBar: AppBar(
         leading: Padding(
@@ -51,7 +53,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
         backgroundColor: Colors.lightBlue,
       ),
-      body: const HomeMapView(),
+      body: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          const HomeMapView(),
+          if (state.geoFenceRadius != 0 && state.geoFenceCenter != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextButton(
+                onPressed: () {
+                  controller.checkIn();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: Text(
+                    "Check In",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
