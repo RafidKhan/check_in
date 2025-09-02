@@ -16,8 +16,10 @@ import 'package:permission_handler/permission_handler.dart'
     as permission_handler;
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../utils/firebase_firestore_services/check_in_service.dart';
 import '../../../utils/firebase_firestore_services/geofence_converter.dart';
 import '../../../utils/firebase_firestore_services/user_service.dart';
+import '../model/custom_geo_point.dart';
 import '../model/geofence_model.dart';
 import '../view/components/geofence_required_dialog_for_user.dart';
 import '../view/components/location_permission_required.dart';
@@ -34,6 +36,7 @@ class HomeController extends StateNotifier<HomeState> {
   final Location location = Location();
   final geofenceService = GeoFenceService();
   final userService = UserService();
+  final checkInService = CheckInService();
   StreamSubscription<LocationData>? _locationSubscription;
   MarkerIcon? _currentLocationMarker;
 
@@ -93,15 +96,29 @@ class HomeController extends StateNotifier<HomeState> {
           final tappedPoint =
               state.mapController?.listenerMapSingleTapping.value;
           if (tappedPoint != null) {
-            inputGeoFenceRadius(tappedPoint);
+            _inputGeoFenceRadius(tappedPoint);
           }
         });
       } else {
-        await _drawGeoFenceMarker();
-        _startLocationTracking();
+        await _checkForDataInFireStore();
       }
     } else {
-      await _drawGeoFenceMarker();
+      await _checkForDataInFireStore();
+    }
+  }
+
+  Future<void> _checkForDataInFireStore() async {
+    final currentLocation = await location.getLocation();
+    state = state.copyWith(
+      currentLocation: CustomGeoPoint(
+        lat: currentLocation.latitude ?? 0,
+        lon: currentLocation.longitude ?? 0,
+      ),
+    );
+
+    await _drawGeoFenceMarker();
+    await _getTodaysCheckIn();
+    if (state.checkInTime == null && state.selectedCheckInPoint == null) {
       _startLocationTracking();
     }
   }
@@ -169,21 +186,23 @@ class HomeController extends StateNotifier<HomeState> {
 
           if (state.selectedCheckInPoint == null) {
             if (state.geoFenceCenter == null) {
-              _showGeofenceRequiredDialog(point);
               return;
             }
 
             if (isInsideGeofence(point)) {
-              state = state.copyWith(
-                selectedCheckInPoint: point,
-                checkInTime: DateTime.now(),
-              );
-              await state.mapController?.addMarker(
-                point,
-                markerIcon: const MarkerIcon(
-                  icon: Icon(Icons.navigation, color: Colors.green, size: 48),
-                ),
-              );
+              await checkInService.checkIn(point);
+
+              await _getTodaysCheckIn();
+              // state = state.copyWith(
+              //   selectedCheckInPoint: point,
+              //   checkInTime: DateTime.now(),
+              // );
+              // await state.mapController?.addMarker(
+              //   point,
+              //   markerIcon: const MarkerIcon(
+              //     icon: Icon(Icons.navigation, color: Colors.green, size: 48),
+              //   ),
+              // );
 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -230,56 +249,7 @@ class HomeController extends StateNotifier<HomeState> {
     );
   }
 
-  void _showGeofenceRequiredDialog(GeoPoint point) {
-    final context = Navigation.globalKey.currentContext!;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.fence, color: Colors.blue),
-            SizedBox(width: 10),
-            Text('Geofence Required'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'You need to create a geofence before you can check in.',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'A geofence defines the area where check-ins are allowed.',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              inputGeoFenceRadius(point);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Create Geofence'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> inputGeoFenceRadius(GeoPoint point) async {
+  Future<void> _inputGeoFenceRadius(GeoPoint point) async {
     if (state.geoFenceCenter == null) {
       await showDialog(
         context: Navigation.globalKey.currentContext!,
@@ -318,14 +288,15 @@ class HomeController extends StateNotifier<HomeState> {
   }
 
   Future<void> _drawGeoFenceMarker() async {
-    print("STEP:: 1");
     if (state.geoFenceCenter != null && state.geoFenceRadius != 0) {
-      print("STEP:: 2");
       final circleZone = CircleOSM(
-        centerPoint: state.geoFenceCenter!,
+        centerPoint: osm.GeoPoint(
+          latitude: state.geoFenceCenter!.lat,
+          longitude: state.geoFenceCenter!.lon,
+        ),
         radius: state.geoFenceRadius,
         key:
-            'Geofence_${state.geoFenceCenter!.latitude}_${state.geoFenceCenter!.longitude}',
+            'Geofence_${state.geoFenceCenter!.lat}_${state.geoFenceCenter!.lon}',
         color: Colors.blue.withOpacity(0.3),
         strokeWidth: 2.0,
       );
@@ -333,14 +304,14 @@ class HomeController extends StateNotifier<HomeState> {
       await state.mapController?.drawCircle(circleZone);
 
       await state.mapController?.addMarker(
-        state.geoFenceCenter!,
+        osm.GeoPoint(
+          latitude: state.geoFenceCenter!.lat,
+          longitude: state.geoFenceCenter!.lon,
+        ),
         markerIcon: const MarkerIcon(
           icon: Icon(Icons.fence, color: Colors.blue, size: 48),
         ),
       );
-      print("STEP:: 3");
-    } else {
-      print("STEP:: 4");
     }
   }
 
@@ -361,7 +332,12 @@ class HomeController extends StateNotifier<HomeState> {
             longitude: locationData.longitude!,
           );
 
-          state = state.copyWith(currentLocation: newLocation);
+          state = state.copyWith(
+            currentLocation: CustomGeoPoint(
+              lat: newLocation.latitude,
+              lon: newLocation.longitude,
+            ),
+          );
           await _updateCurrentLocationMarker(newLocation);
           _checkGeofenceStatus(newLocation);
         }
@@ -380,7 +356,12 @@ class HomeController extends StateNotifier<HomeState> {
 
   Future<void> _updateCurrentLocationMarker(GeoPoint newLocation) async {
     if (state.currentLocation != null) {
-      await state.mapController?.removeMarker(state.currentLocation!);
+      await state.mapController?.removeMarker(
+        osm.GeoPoint(
+          latitude: state.currentLocation!.lat,
+          longitude: state.currentLocation!.lon,
+        ),
+      );
     }
 
     await state.mapController?.addMarker(
@@ -410,9 +391,17 @@ class HomeController extends StateNotifier<HomeState> {
         icon: Icon(Icons.navigation, color: Colors.white, size: 24),
       );
 
-      await state.mapController?.removeMarker(state.currentLocation!);
+      await state.mapController?.removeMarker(
+        osm.GeoPoint(
+          latitude: state.currentLocation!.lat,
+          longitude: state.currentLocation!.lon,
+        ),
+      );
       await state.mapController?.addMarker(
-        state.currentLocation!,
+        osm.GeoPoint(
+          latitude: state.currentLocation!.lat,
+          longitude: state.currentLocation!.lon,
+        ),
         markerIcon: _currentLocationMarker!,
       );
     }
@@ -429,8 +418,8 @@ class HomeController extends StateNotifier<HomeState> {
     final distance = _calculateDistance(
       point.latitude,
       point.longitude,
-      center.latitude,
-      center.longitude,
+      center.lat,
+      center.lon,
     );
 
     return distance <= radius;
@@ -462,37 +451,59 @@ class HomeController extends StateNotifier<HomeState> {
     return degrees * pi / 180;
   }
 
-  void checkOut() {
-    // Cancel location tracking subscription
-    _locationSubscription?.cancel();
+  Future<void> checkOut() async {
+    try {
+      // 1. First save checkout to Firestore
+      await checkInService.checkOut();
 
-    // Remove check-in marker if exists
-    if (state.selectedCheckInPoint != null) {
-      state.mapController?.removeMarker(state.selectedCheckInPoint!);
+      await _getTodaysCheckIn();
+
+      // 2. Then update local UI state
+      _locationSubscription?.cancel();
+
+      // Remove check-in marker if exists
+      if (state.selectedCheckInPoint != null) {
+        state.mapController?.removeMarker(
+          osm.GeoPoint(
+            latitude: state.selectedCheckInPoint!.lat,
+            longitude: state.selectedCheckInPoint!.lon,
+          ),
+        );
+      }
+
+      // Remove current location marker if exists
+      if (state.currentLocation != null) {
+        state.mapController?.removeMarker(
+          osm.GeoPoint(
+            latitude: state.currentLocation!.lat,
+            longitude: state.currentLocation!.lon,
+          ),
+        );
+      }
+
+      // Update state to stop tracking and record checkout time
+      state = state.copyWith(isTracking: false);
+
+      // Show checkout confirmation
+      ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
+        const SnackBar(
+          content: Text('Checked out successfully'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      print('User checked out at ${DateTime.now()}');
+    } catch (e) {
+      print('Error during checkout: $e');
+
+      // Show error message
+      ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
+        SnackBar(
+          content: Text('Checkout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-
-    // Remove current location marker if exists
-    if (state.currentLocation != null) {
-      state.mapController?.removeMarker(state.currentLocation!);
-    }
-
-    // Update state to stop tracking and record checkout time
-    state = state.copyWith(
-      isTracking: false,
-      checkOutTime: DateTime.now(),
-      selectedCheckInPoint: null, // Reset check-in point
-      currentLocation: null, // Clear current location
-    );
-
-    // Show checkout confirmation
-    ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
-      const SnackBar(
-        content: Text('Checked out successfully'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-
-    print('User checked out at ${DateTime.now()}');
   }
 
   Future<void> initializeUser(BuildContext context) async {
@@ -525,12 +536,44 @@ class HomeController extends StateNotifier<HomeState> {
         );
 
         state = state.copyWith(
-          geoFenceCenter: osmCenter,
+          geoFenceCenter: CustomGeoPoint(
+            lat: osmCenter.latitude,
+            lon: osmCenter.longitude,
+          ),
           geoFenceRadius: geoFenceData.radius,
         );
       }
     } catch (e) {
       print('Error fetching geofence data: $e');
+    }
+  }
+
+  Future<void> _getTodaysCheckIn() async {
+    try {
+      final result = await checkInService.getTodaysCheckIn();
+
+      // Debug the GeoPoint types
+      if (result != null) {
+        state = state.copyWith(
+          selectedCheckInPoint: CustomGeoPoint(
+            lat: result.checkInPoint.latitude,
+            lon: result.checkInPoint.longitude,
+          ),
+          checkInTime: result.checkInTime,
+          checkOutTime: result.checkOutTime,
+        );
+
+        print("TIME IS:${state.checkInTime}");
+
+        await state.mapController?.addMarker(
+          result.checkInPoint,
+          markerIcon: const MarkerIcon(
+            icon: Icon(Icons.navigation, color: Colors.green, size: 48),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error getting today\'s check-in: $e');
     }
   }
 }

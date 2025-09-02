@@ -2,12 +2,14 @@ import 'package:check_in/modules/home_page/model/user_model.dart';
 import 'package:check_in/utils/enum.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 
+import '../../model/custom_geo_point.dart';
+
 class HomeState {
-  final GeoPoint? selectedCheckInPoint;
-  final GeoPoint? geoFenceCenter;
+  final CustomGeoPoint? selectedCheckInPoint;
+  final CustomGeoPoint? geoFenceCenter;
   final MapController? mapController;
   final double geoFenceRadius;
-  final GeoPoint? currentLocation;
+  final CustomGeoPoint? currentLocation;
   final bool isTracking;
   final DateTime? checkInTime;
   final DateTime? checkOutTime;
@@ -28,11 +30,11 @@ class HomeState {
   });
 
   HomeState copyWith({
-    GeoPoint? selectedCheckInPoint,
-    GeoPoint? geoFenceCenter,
+    CustomGeoPoint? selectedCheckInPoint,
+    CustomGeoPoint? geoFenceCenter,
     MapController? mapController,
     double? geoFenceRadius,
-    GeoPoint? currentLocation,
+    CustomGeoPoint? currentLocation,
     bool? isTracking,
     DateTime? checkInTime,
     DateTime? checkOutTime,

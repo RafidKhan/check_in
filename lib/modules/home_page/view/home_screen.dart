@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../controller/home_controller.dart';
 import 'components/home_map_view.dart';
+import 'package:flutter_osm_plugin/flutter_osm_plugin.dart' as osm;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -114,7 +115,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 decoration: BoxDecoration(
                   color:
                       state.currentLocation != null &&
-                          controller.isInsideGeofence(state.currentLocation!)
+                          controller.isInsideGeofence(
+                            osm.GeoPoint(
+                              latitude: state.currentLocation!.lat,
+                              longitude: state.currentLocation!.lon,
+                            ),
+                          )
                       ? Colors.green.withOpacity(0.9)
                       : Colors.red.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20),
@@ -132,7 +138,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Icon(
                       state.currentLocation != null &&
                               controller.isInsideGeofence(
-                                state.currentLocation!,
+                                osm.GeoPoint(
+                                  latitude: state.currentLocation!.lat,
+                                  longitude: state.currentLocation!.lon,
+                                ),
                               )
                           ? Icons.check_circle
                           : Icons.warning,
@@ -143,7 +152,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Text(
                       state.currentLocation != null &&
                               controller.isInsideGeofence(
-                                state.currentLocation!,
+                                osm.GeoPoint(
+                                  latitude: state.currentLocation!.lat,
+                                  longitude: state.currentLocation!.lon,
+                                ),
                               )
                           ? 'Inside Geofence'
                           : 'Outside Geofence',
@@ -194,8 +206,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           style: const TextStyle(fontSize: 14),
                         ),
                         Text(
-                          'Center: ${state.geoFenceCenter!.latitude.toStringAsFixed(6)}, '
-                          '${state.geoFenceCenter!.longitude.toStringAsFixed(6)}',
+                          'Center: ${state.geoFenceCenter!.lat.toStringAsFixed(6)}, '
+                          '${state.geoFenceCenter!.lon.toStringAsFixed(6)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
@@ -206,7 +218,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
 
                   if (state.currentLocation != null &&
-                      controller.isInsideGeofence(state.currentLocation!)) ...[
+                      controller.isInsideGeofence(
+                        osm.GeoPoint(
+                          latitude: state.currentLocation!.lat,
+                          longitude: state.currentLocation!.lon,
+                        ),
+                      )) ...[
                     if (state.selectedCheckInPoint == null) ...[
                       ElevatedButton(
                         onPressed: () {
