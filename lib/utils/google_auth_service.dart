@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleAuthService {
-  static GoogleSignInAccount? _currentUser;
+  static GoogleSignInAccount? currentUser;
 
   static Future<void> initialize() async {
     await GoogleSignIn.instance.initialize();
@@ -33,7 +33,7 @@ class GoogleAuthService {
           .signInWithCredential(credential);
 
       // 5. Update local state
-      _currentUser = googleUser;
+      currentUser = googleUser;
 
       return userCredential.user;
     } catch (error) {
@@ -46,7 +46,7 @@ class GoogleAuthService {
   static Future<void> signOut() async {
     await GoogleSignIn.instance.signOut();
     await FirebaseAuth.instance.signOut();
-    _currentUser = null;
+    currentUser = null;
     Navigation.pushAndRemoveUntil(const LoginScreen());
   }
 }

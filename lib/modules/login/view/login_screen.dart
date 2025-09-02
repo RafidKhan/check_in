@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/google_auth_service.dart';
 import '../../../utils/navigation.dart';
-import '../../home/view/home_screen.dart';
+import '../../home_page/view/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,10 +33,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final user = await GoogleAuthService.signInWithGoogle();
-      print('Sign in result: $user'); // Debug line
 
       if (user != null) {
-        print('User email: ${user.email}'); // Debug line
         Navigation.pushReplacement(const HomeScreen());
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -47,7 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (error) {
-      print('Sign in error details: $error'); // Debug line
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error during sign in: $error'),
@@ -115,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
 
                 const Text(
-                  'Sign in to check in at your favorite locations',
+                  'Sign in to check in',
                   style: TextStyle(fontSize: 16, color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),

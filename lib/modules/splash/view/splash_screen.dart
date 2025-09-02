@@ -4,7 +4,7 @@ import 'package:check_in/utils/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../home/view/home_screen.dart';
+import '../../home_page/view/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 shape: BoxShape.circle,
                 color: Colors.blue.shade50,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.location_on, // Map Pin
                 size: 80,
                 color: Colors.blue,
@@ -71,8 +71,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
             const SizedBox(height: 8),
 
-            Text(
-              "Location-based check-ins made simple",
+            const Text(
+              "Never miss your attendance!",
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
