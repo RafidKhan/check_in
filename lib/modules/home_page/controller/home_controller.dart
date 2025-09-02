@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:math';
-
+import 'package:flutter_osm_plugin/flutter_osm_plugin.dart' as osm;
 import 'package:check_in/modules/home_page/model/user_model.dart';
 import 'package:check_in/modules/home_page/view/components/geofence_required_dialog.dart';
 import 'package:check_in/modules/home_page/view/components/radius_input_bottom_sheet.dart';
 import 'package:check_in/utils/enum.dart';
 import 'package:check_in/utils/extensions.dart';
+import 'package:check_in/utils/firebase_firestore_services/geofence_service.dart';
 import 'package:check_in/utils/navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
@@ -15,7 +16,9 @@ import 'package:permission_handler/permission_handler.dart'
     as permission_handler;
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../utils/firebase_firestore_services/geofence_converter.dart';
 import '../../../utils/firebase_firestore_services/user_service.dart';
+import '../model/geofence_model.dart';
 import '../view/components/geofence_required_dialog_for_user.dart';
 import '../view/components/location_permission_required.dart';
 import 'state/home_state.dart';
@@ -29,6 +32,8 @@ class HomeController extends StateNotifier<HomeState> {
   HomeController() : super(const HomeState());
 
   final Location location = Location();
+  final geofenceService = GeoFenceService();
+  final userService = UserService();
   StreamSubscription<LocationData>? _locationSubscription;
   MarkerIcon? _currentLocationMarker;
 
@@ -69,6 +74,7 @@ class HomeController extends StateNotifier<HomeState> {
 
     state = state.copyWith(mapController: mapController);
     Navigator.pop(context);
+    await _fetchGeoFenceData();
 
     if (state.geoFenceCenter == null && state.geoFenceRadius == 0) {
       await showDialog(
@@ -81,12 +87,16 @@ class HomeController extends StateNotifier<HomeState> {
       );
     }
 
-    state.mapController?.listenerMapSingleTapping.addListener(() async {
-      final tappedPoint = state.mapController?.listenerMapSingleTapping.value;
-      if (tappedPoint != null) {
-        inputGeoFenceRadius(tappedPoint);
-      }
-    });
+    if (state.userType == UserType.Admin) {
+      state.mapController?.listenerMapSingleTapping.addListener(() async {
+        final tappedPoint = state.mapController?.listenerMapSingleTapping.value;
+        if (tappedPoint != null) {
+          inputGeoFenceRadius(tappedPoint);
+        }
+      });
+    } else {
+      _startLocationTracking();
+    }
   }
 
   Future<void> requestLocationPermission({
@@ -283,47 +293,50 @@ class HomeController extends StateNotifier<HomeState> {
   }
 
   Future<void> _createGeofence(GeoPoint center, double radiusMeters) async {
-    try {
-      final circleZone = CircleOSM(
-        centerPoint: center,
-        radius: radiusMeters,
-        key: 'Geofence_${center.latitude}_${center.longitude}',
-        color: Colors.blue.withOpacity(0.3),
-        strokeWidth: 2.0,
-      );
+    // try {
+    final circleZone = CircleOSM(
+      centerPoint: center,
+      radius: radiusMeters,
+      key: 'Geofence_${center.latitude}_${center.longitude}',
+      color: Colors.blue.withOpacity(0.3),
+      strokeWidth: 2.0,
+    );
 
-      await state.mapController?.drawCircle(circleZone);
+    await state.mapController?.drawCircle(circleZone);
 
-      state = state.copyWith(
-        geoFenceCenter: center,
-        geoFenceRadius: radiusMeters,
-      );
+    await geofenceService.createOrUpdateGeoFence(center, radiusMeters);
 
-      await state.mapController?.addMarker(
-        center,
-        markerIcon: const MarkerIcon(
-          icon: Icon(Icons.fence, color: Colors.blue, size: 48),
-        ),
-      );
+    // state = state.copyWith(
+    //   geoFenceCenter: geofence.center,
+    //   geoFenceRadius: geofence.radius,
+    // );
+    await _fetchGeoFenceData();
 
-      // Start live location tracking after creating geofence
-      _startLocationTracking();
+    await state.mapController?.addMarker(
+      center,
+      markerIcon: const MarkerIcon(
+        icon: Icon(Icons.fence, color: Colors.blue, size: 48),
+      ),
+    );
 
-      ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
-        SnackBar(
-          content: Text('Geofence created with $radiusMeters meters radius'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Error creating geofence: $e');
-      ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to create geofence'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    // Start live location tracking after creating geofence
+    _startLocationTracking();
+
+    ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
+      SnackBar(
+        content: Text('Geofence created with $radiusMeters meters radius'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    // } catch (e) {
+    //   print('Error creating geofence: $e');
+    //   ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
+    //     const SnackBar(
+    //       content: Text('Failed to create geofence'),
+    //       backgroundColor: Colors.red,
+    //     ),
+    //   );
+    // }
   }
 
   void _startLocationTracking() async {
@@ -454,7 +467,6 @@ class HomeController extends StateNotifier<HomeState> {
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      final userService = UserService();
       final user = await userService.checkAndCreateUser();
       state = state.copyWith(
         userModel: UserModel.fromJson(user.toJson()),
@@ -464,6 +476,27 @@ class HomeController extends StateNotifier<HomeState> {
     } catch (e) {
       print('Failed to initialize user: $e');
       Navigation.pop();
+    }
+  }
+
+  Future<void> _fetchGeoFenceData() async {
+    try {
+      final GeoFenceModel? geoFenceData = await geofenceService
+          .getActiveGeoFence();
+
+      if (geoFenceData != null) {
+        // Convert Firestore GeoPoint to OSM GeoPoint for the map
+        final osm.GeoPoint osmCenter = GeoPointConverter.toOsmGeoPoint(
+          geoFenceData.center,
+        );
+
+        state = state.copyWith(
+          geoFenceCenter: osmCenter,
+          geoFenceRadius: geoFenceData.radius,
+        );
+      }
+    } catch (e) {
+      print('Error fetching geofence data: $e');
     }
   }
 }
