@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:check_in/modules/home_page/view/components/geofence_required_dialog.dart';
@@ -23,6 +24,14 @@ class HomeController extends StateNotifier<HomeState> {
   HomeController() : super(const HomeState());
 
   final Location location = Location();
+  StreamSubscription<LocationData>? _locationSubscription;
+  MarkerIcon? _currentLocationMarker;
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
 
   Future<void> initMap(BuildContext context) async {
     showDialog(
@@ -34,12 +43,7 @@ class HomeController extends StateNotifier<HomeState> {
         await setMapController(context);
       },
       onError: (error) async {
-        // await setMapController(
-        //   context,
-        //   fallbackLocation: GeoPoint(latitude: 23.8041, longitude: 90.4152),
-        // );
         Navigation.pop();
-
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -60,6 +64,7 @@ class HomeController extends StateNotifier<HomeState> {
 
     state = state.copyWith(mapController: mapController);
     Navigator.pop(context);
+
     if (state.geoFenceCenter == null && state.geoFenceRadius == 0) {
       await showDialog(
         context: context,
@@ -85,13 +90,11 @@ class HomeController extends StateNotifier<HomeState> {
       var status = await Permission.location.status;
 
       if (status.isGranted) {
-        // Permission already granted
         onSuccess();
         return;
       }
 
       if (status.isDenied || status.isRestricted || status.isLimited) {
-        // Request permission
         status = await Permission.location.request();
         if (status.isGranted) {
           onSuccess();
@@ -114,7 +117,6 @@ class HomeController extends StateNotifier<HomeState> {
   Future<void> checkIn() async {
     final context = Navigation.globalKey.currentContext!;
 
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -124,28 +126,21 @@ class HomeController extends StateNotifier<HomeState> {
     await requestLocationPermission(
       onSuccess: () async {
         try {
-          // Get current location
           final currentLocation = await location.getLocation();
           final point = GeoPoint(
             latitude: currentLocation.latitude ?? 0,
             longitude: currentLocation.longitude ?? 0,
           );
 
-          // Close loading indicator
           Navigator.pop(context);
 
           if (state.selectedCheckInPoint == null) {
             if (state.geoFenceCenter == null) {
-              await showDialog(
-                context: context,
-                builder: (context) {
-                  return const GeoFenceRequiredDialog();
-                },
-              );
+              _showGeofenceRequiredDialog(point);
               return;
             }
 
-            if (_isInsideGeofence(point)) {
+            if (isInsideGeofence(point)) {
               state = state.copyWith(selectedCheckInPoint: point);
               await state.mapController?.addMarker(
                 point,
@@ -181,7 +176,7 @@ class HomeController extends StateNotifier<HomeState> {
             );
           }
         } catch (e) {
-          Navigator.pop(context); // Close loading indicator
+          Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error getting location: $e'),
@@ -191,11 +186,60 @@ class HomeController extends StateNotifier<HomeState> {
         }
       },
       onError: (errorMessage) {
-        Navigator.pop(context); // Close loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
+        Navigator.pop(context);
+        ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
           SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
         );
       },
+    );
+  }
+
+  void _showGeofenceRequiredDialog(GeoPoint point) {
+    final context = Navigation.globalKey.currentContext!;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.fence, color: Colors.blue),
+            SizedBox(width: 10),
+            Text('Geofence Required'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You need to create a geofence before you can check in.',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'A geofence defines the area where check-ins are allowed.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              inputGeoFenceRadius(point);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Create Geofence'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -206,7 +250,6 @@ class HomeController extends StateNotifier<HomeState> {
         builder: (context) => const RadiusInputBottomSheet(),
       ).then((radius) async {
         if (radius != null) {
-          // Create geofence
           await _createGeofence(point, radius);
         }
       });
@@ -222,7 +265,6 @@ class HomeController extends StateNotifier<HomeState> {
 
   Future<void> _createGeofence(GeoPoint center, double radiusMeters) async {
     try {
-      // Create circle zone for geofence
       final circleZone = CircleOSM(
         centerPoint: center,
         radius: radiusMeters,
@@ -231,22 +273,22 @@ class HomeController extends StateNotifier<HomeState> {
         strokeWidth: 2.0,
       );
 
-      // Add to map
       await state.mapController?.drawCircle(circleZone);
 
-      // Store geofence data
       state = state.copyWith(
         geoFenceCenter: center,
         geoFenceRadius: radiusMeters,
       );
 
-      // Add marker for geofence center
       await state.mapController?.addMarker(
         center,
         markerIcon: const MarkerIcon(
           icon: Icon(Icons.fence, color: Colors.blue, size: 48),
         ),
       );
+
+      // Start live location tracking after creating geofence
+      _startLocationTracking();
 
       ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
         SnackBar(
@@ -265,7 +307,76 @@ class HomeController extends StateNotifier<HomeState> {
     }
   }
 
-  bool _isInsideGeofence(GeoPoint point) {
+  void _startLocationTracking() async {
+    if (state.isTracking) return;
+
+    _currentLocationMarker = const MarkerIcon(
+      icon: Icon(Icons.navigation, color: Colors.white, size: 24),
+    );
+
+    state = state.copyWith(isTracking: true);
+
+    _locationSubscription = location.onLocationChanged.listen(
+      (LocationData locationData) async {
+        if (locationData.latitude != null && locationData.longitude != null) {
+          final newLocation = GeoPoint(
+            latitude: locationData.latitude!,
+            longitude: locationData.longitude!,
+          );
+
+          state = state.copyWith(currentLocation: newLocation);
+          await _updateCurrentLocationMarker(newLocation);
+          _checkGeofenceStatus(newLocation);
+        }
+      },
+      onError: (error) {
+        print('Location tracking error: $error');
+        ScaffoldMessenger.of(Navigation.globalKey.currentContext!).showSnackBar(
+          SnackBar(
+            content: Text('Location tracking error: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _updateCurrentLocationMarker(GeoPoint newLocation) async {
+    if (state.currentLocation != null) {
+      await state.mapController?.removeMarker(state.currentLocation!);
+    }
+
+    await state.mapController?.addMarker(
+      newLocation,
+      markerIcon: _currentLocationMarker!,
+    );
+  }
+
+  void _checkGeofenceStatus(GeoPoint currentLocation) {
+    final isInside = isInsideGeofence(currentLocation);
+
+    if (isInside) {
+      _updateMarkerColor(Colors.green);
+    } else {
+      _updateMarkerColor(Colors.red);
+    }
+  }
+
+  Future<void> _updateMarkerColor(Color color) async {
+    if (state.currentLocation != null && _currentLocationMarker != null) {
+      _currentLocationMarker = const MarkerIcon(
+        icon: Icon(Icons.navigation, color: Colors.white, size: 24),
+      );
+
+      await state.mapController?.removeMarker(state.currentLocation!);
+      await state.mapController?.addMarker(
+        state.currentLocation!,
+        markerIcon: _currentLocationMarker!,
+      );
+    }
+  }
+
+  bool isInsideGeofence(GeoPoint point) {
     if (state.geoFenceCenter == null || state.geoFenceRadius == 0) {
       return false;
     }
@@ -289,7 +400,7 @@ class HomeController extends StateNotifier<HomeState> {
     double lat2,
     double lon2,
   ) {
-    const earthRadius = 6371000; // meters
+    const earthRadius = 6371000;
 
     final dLat = _degreesToRadians(lat2 - lat1);
     final dLon = _degreesToRadians(lon2 - lon1);
