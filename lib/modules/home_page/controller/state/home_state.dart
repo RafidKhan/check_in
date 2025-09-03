@@ -2,6 +2,7 @@ import 'package:check_in/modules/home_page/model/user_model.dart';
 import 'package:check_in/utils/enum.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 
+import '../../model/check_in_model.dart';
 import '../../model/custom_geo_point.dart';
 
 class HomeState {
@@ -15,6 +16,7 @@ class HomeState {
   final DateTime? checkOutTime;
   final UserModel? userModel;
   final UserType userType;
+  final List<CheckInModel> checkIns;
 
   const HomeState({
     this.selectedCheckInPoint,
@@ -27,6 +29,7 @@ class HomeState {
     this.checkOutTime,
     this.userModel,
     this.userType = UserType.RegularUser,
+    this.checkIns = const [],
   });
 
   HomeState copyWith({
@@ -40,6 +43,7 @@ class HomeState {
     DateTime? checkOutTime,
     UserModel? userModel,
     UserType? userType,
+    List<CheckInModel>? checkIns,
   }) {
     return HomeState(
       selectedCheckInPoint: selectedCheckInPoint ?? this.selectedCheckInPoint,
@@ -52,6 +56,7 @@ class HomeState {
       checkOutTime: checkOutTime ?? this.checkOutTime,
       userModel: userModel ?? this.userModel,
       userType: userType ?? this.userType,
+      checkIns: checkIns ?? this.checkIns,
     );
   }
 }

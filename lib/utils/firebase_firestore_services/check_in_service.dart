@@ -4,10 +4,12 @@ import 'package:flutter_osm_plugin/flutter_osm_plugin.dart' as osm;
 import '../../modules/home_page/model/check_in_model.dart';
 
 class CheckInService {
-  final firestore.FirebaseFirestore _firestore = firestore.FirebaseFirestore.instance;
+  final firestore.FirebaseFirestore _firestore =
+      firestore.FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  firestore.CollectionReference get _checkinsCollection => _firestore.collection('checkins');
+  firestore.CollectionReference get _checkinsCollection =>
+      _firestore.collection('checkins');
 
   /// Get today's check-in record (completely index-free)
   Future<CheckInModel?> getTodaysCheckIn() async {
@@ -20,8 +22,6 @@ class CheckInService {
           .where('userId', isEqualTo: currentUser.uid)
           .get();
 
-      // Filter for today's check-in locally
-      final today = DateTime.now();
       for (final doc in querySnapshot.docs) {
         final checkIn = CheckInModel.fromFirestore(doc);
         if (checkIn.isToday) {
@@ -31,7 +31,6 @@ class CheckInService {
 
       return null;
     } catch (e) {
-      print('Error getting today\'s check-in: $e');
       return null;
     }
   }
@@ -152,6 +151,36 @@ class CheckInService {
     } catch (e) {
       print('Error getting current check-in: $e');
       return null;
+    }
+  }
+
+  /// Get all check-ins for today (for admin purposes)
+  Future<List<CheckInModel>> getTodaysAllCheckIns() async {
+    try {
+      // Get current date boundaries
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+      // Get all check-ins from today
+      final querySnapshot = await _checkinsCollection
+          .where(
+            'checkInTime',
+            isGreaterThanOrEqualTo: firestore.Timestamp.fromDate(startOfDay),
+          )
+          .where(
+            'checkInTime',
+            isLessThanOrEqualTo: firestore.Timestamp.fromDate(endOfDay),
+          )
+          .orderBy('checkInTime', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        return CheckInModel.fromFirestore(doc);
+      }).toList();
+    } catch (e) {
+      print("EXC: $e");
+      return [];
     }
   }
 }

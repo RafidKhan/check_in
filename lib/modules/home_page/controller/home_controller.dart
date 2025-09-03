@@ -39,10 +39,13 @@ class HomeController extends StateNotifier<HomeState> {
   final checkInService = CheckInService();
   StreamSubscription<LocationData>? _locationSubscription;
   MarkerIcon? _currentLocationMarker;
+  Timer? _timer;
 
   @override
   void dispose() {
     _locationSubscription?.cancel();
+    _timer?.cancel();
+    _timer = null;
     super.dispose();
   }
 
@@ -569,5 +572,17 @@ class HomeController extends StateNotifier<HomeState> {
     } catch (e) {
       print('Error getting today\'s check-in: $e');
     }
+  }
+
+  void startCheckInTimer() {
+    fetchAllCheckInData();
+    _timer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      fetchAllCheckInData();
+    });
+  }
+
+  Future<void> fetchAllCheckInData() async {
+    final result = await checkInService.getTodaysAllCheckIns();
+    state = state.copyWith(checkIns: result);
   }
 }

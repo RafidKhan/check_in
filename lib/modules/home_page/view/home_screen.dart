@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../controller/home_controller.dart';
+import 'components/check_in_bottom_sheet.dart';
 import 'components/home_map_view.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart' as osm;
 
@@ -23,6 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Future(() {
       controller.initializeUser(context).then((value) {
         controller.initMap(context);
+        controller.startCheckInTimer();
       });
     });
   }
@@ -49,6 +51,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          IconButton(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.8,
+                  child: const CheckInBottomSheet(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.history),
+          ),
           IconButton(
             onPressed: () {
               GoogleAuthService.signOut();

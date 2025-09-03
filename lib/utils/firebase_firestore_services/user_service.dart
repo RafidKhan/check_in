@@ -35,7 +35,8 @@ class UserService {
           email: currentUser.email ?? '',
           displayName: currentUser.displayName,
           photoURL: currentUser.photoURL,
-          userType: 'User', // Default role
+          userType: 'User',
+          // Default role
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -46,9 +47,10 @@ class UserService {
       }
 
       // 3. Fetch and return the user info (ensures we have latest data)
-      final DocumentSnapshot updatedDoc = await _usersCollection.doc(userId).get();
+      final DocumentSnapshot updatedDoc = await _usersCollection
+          .doc(userId)
+          .get();
       return UserModel.fromFirestore(updatedDoc);
-
     } catch (e) {
       print('Error in checkAndCreateUser: $e');
       rethrow;
