@@ -4,6 +4,7 @@ import 'package:check_in/utils/navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../utils/connectivity_service.dart';
 import '../../home_page/view/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,8 +18,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((e) {
-      _checkLoginStatus();
+    WidgetsBinding.instance.addPostFrameCallback((e) async {
+      await NetworkConnection.instance.initialize();
+      if (NetworkConnection.instance.isInternet) {
+        _checkLoginStatus();
+      }
     });
   }
 
